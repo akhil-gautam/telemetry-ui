@@ -12,15 +12,21 @@ import {
   LineChart,
 } from '@tremor/react';
 
-import { metricsListQuery } from '../queries/MetricsQueries';
+import { metricsListQuery, usageQuery } from '../queries/MetricsQueries';
 import { errorsListQuery } from '../queries/ErrorQueries';
 import { formatRequestsData } from '../util/DataFormatter';
 
 export default function Metrics() {
-  const { data: requests, isLoading: isRequests } = useQuery(metricsListQuery());
-  const { data: errors, isLoading: isErrorsLoading } = useQuery(errorsListQuery());
+  const { data: requests, isLoading: isRequests } = useQuery(
+    metricsListQuery()
+  );
+  const { data: errors, isLoading: isErrorsLoading } = useQuery(
+    errorsListQuery()
+  );
+  const { data: usage, isLoading: isUsageLoading } = useQuery(usageQuery());
 
-  if (isRequests || isErrorsLoading) return <div>Loading...</div>;
+  if (isRequests || isErrorsLoading || isUsageLoading)
+    return <div>Loading...</div>;
 
   const { averageTime, routes, slowestRequest } = formatRequestsData(
     requests.documents,
@@ -35,12 +41,14 @@ export default function Metrics() {
     startTime: new Date(item.startTimeUnixNano / 1e6).toLocaleString(),
   }));
 
-
-  const {routes: errorFrequency} = formatRequestsData(errors.documents, errors.total);
+  const { routes: errorFrequency } = formatRequestsData(
+    errors.documents,
+    errors.total
+  );
 
   return (
     <main className='w-full flex flex-col p-10 space-y-10 bg-yellow-100'>
-      <section className='w-full grid grid-cols-2'>
+      <section className='w-full flex justify-between'>
         <Card className='max-w-xl hover:scale-105 transition'>
           <Title>
             Recent requests{' '}
@@ -72,7 +80,7 @@ export default function Metrics() {
           />
         </Card>
       </section>
-      <div className='max-w-xl flex space-x-5'>
+      <div className='flex space-x-5'>
         <Card
           className='max-w-md hover:scale-105 transition'
           decoration='left'
@@ -82,10 +90,12 @@ export default function Metrics() {
           <Metric>{averageTime.toFixed(2)}ms</Metric>
         </Card>
         <Card
-          className='max-w-lg hover:scale-105 transition'
+          className='max-w-md hover:scale-105 transition'
           decoration='left'
           decorationColor={
-            Object.values(slowestRequest).some(el => el > 40) ? 'lime' : 'blue'
+            Object.values(slowestRequest).some((el) => el > 40)
+              ? 'lime'
+              : 'blue'
           }
         >
           <Title className='mb-2'>Slowest endpoints</Title>
@@ -97,6 +107,25 @@ export default function Metrics() {
                 <span> {spanTime.toFixed(2)}ms</span>
               </Text>
             ))}
+        </Card>
+        <Card
+          className='max-w-md hover:scale-105 transition'
+          decoration='left'
+          decorationColor={'amber'}
+        >
+          <Title>Usage</Title>
+          <Text className='mb-1'>
+            <span className='font-semibold'>CPU: </span>
+            {usage.documents[0]?.cpu}
+          </Text>
+          <Text className='mb-1'>
+            <span className='font-semibold'>Memory usage: </span>
+            {usage.documents[0]?.memoryUsage}
+          </Text>
+          <Text>
+            <span className='font-semibold'>Heap usage: </span>
+            {usage.documents[0]?.heapUsage}
+          </Text>
         </Card>
       </div>
       <Card>
